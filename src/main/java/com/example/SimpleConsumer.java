@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 
 
@@ -34,7 +35,19 @@ public class SimpleConsumer {
 
             for (ConsumerRecord<String, String> record : records) {
                 logger.info("==> {}", record);
-                consumer.commitAsync();
+                consumer.commitAsync(new OffsetCommitCallback() {
+                    @Override
+                    public void onComplete(Map<TopicPartition, OffsetAndMetadata> offsets, Exception e) {
+                        if (e != null) {
+                            System.err.println("Commit failed");
+                        } else {
+                            System.out.println("Commit succeded");
+                        }
+                        if (e != null) {
+                            logger.error("Commit failed for offsets {}", offsets, e);
+                        }
+                    }
+                });
             }
         }
     }
