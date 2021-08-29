@@ -2,6 +2,7 @@ package com.example;
 
 import org.apache.kafka.clients.consumer.*;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.errors.WakeupException;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,6 +21,7 @@ public class SimpleConsumer {
     private static Map<TopicPartition, OffsetAndMetadata> currentOffsets = new HashMap<>();
 
     public static void main(String[] args) {
+        Runtime.getRuntime().addShutdownHook(new ShutDownThread());
         Properties configs = new Properties();
         configs.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
         configs.put(ConsumerConfig.GROUP_ID_CONFIG, GROUP_ID);
@@ -29,17 +31,22 @@ public class SimpleConsumer {
 
         consumer = new KafkaConsumer<>(configs);
         consumer.subscribe(Arrays.asList(TOPIC_NAME), new ReblanceListener());
-        Set<TopicPartition> assignedTopicPartition = consumer.assignment();
 
-        while(true) {
-            ConsumerRecords<String, String> records = consumer.poll(Duration.ofSeconds(1));
+        try {
+            while(true) {
+                ConsumerRecords<String, String> records = consumer.poll(Duration.ofSeconds(1));
 
-            for (ConsumerRecord<String, String> record : records) {
-                logger.info("==> {}", record);
-                currentOffsets.put(new TopicPartition(record.topic(), record.partition()),
-                        new OffsetAndMetadata(record.offset() + 1 , null));
-                consumer.commitSync(currentOffsets);
+                for (ConsumerRecord<String, String> record : records) {
+                    logger.info("==> {}", record);
+                    currentOffsets.put(new TopicPartition(record.topic(), record.partition()),
+                            new OffsetAndMetadata(record.offset() + 1 , null));
+                    consumer.commitSync(currentOffsets);
+                }
             }
+        } catch (WakeupException e) {
+            logger.warn("Wakeup consumer");
+        } finally {
+            consumer.close();
         }
     }
 
@@ -55,5 +62,12 @@ public class SimpleConsumer {
             consumer.commitSync(currentOffsets);
         }
 
+    }
+
+    private static class ShutDownThread extends Thread {
+        public void run() {
+            logger.info("Shutdown hook");
+            consumer.wakeup();
+        }
     }
 }
