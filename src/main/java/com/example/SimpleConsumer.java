@@ -19,8 +19,6 @@ public class SimpleConsumer {
     private static KafkaConsumer<String, String> consumer = null;
     private static Map<TopicPartition, OffsetAndMetadata> currentOffsets = new HashMap<>();
 
-    private static int PARTITION_NUMBER = 0;
-
     public static void main(String[] args) {
         Properties configs = new Properties();
         configs.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
@@ -30,7 +28,8 @@ public class SimpleConsumer {
         configs.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false); // 명시적 오프셋 커밋을 하겠다는 설정
 
         consumer = new KafkaConsumer<>(configs);
-        consumer.assign(Collections.singleton(new TopicPartition(TOPIC_NAME, PARTITION_NUMBER)));
+        consumer.subscribe(Arrays.asList(TOPIC_NAME), new ReblanceListener());
+        Set<TopicPartition> assignedTopicPartition = consumer.assignment();
 
         while(true) {
             ConsumerRecords<String, String> records = consumer.poll(Duration.ofSeconds(1));
