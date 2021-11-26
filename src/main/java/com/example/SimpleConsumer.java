@@ -14,7 +14,7 @@ import java.util.*;
 public class SimpleConsumer {
     private final static Logger logger = LoggerFactory.getLogger(SimpleConsumer.class);
     private final static String TOPIC_NAME = "test";
-    private final static String BOOTSTRAP_SERVERS = "my-linux:9092";
+    private final static String BOOTSTRAP_SERVERS = "hLinux:9092";
     private final static String GROUP_ID = "test-group";
 
     private static KafkaConsumer<String, String> consumer = null;
@@ -39,8 +39,8 @@ public class SimpleConsumer {
                 for (ConsumerRecord<String, String> record : records) {
                     logger.info("==> {}", record);
                     currentOffsets.put(new TopicPartition(record.topic(), record.partition()),
-                            new OffsetAndMetadata(record.offset() + 1 , null));
-                    consumer.commitSync(currentOffsets);
+                            new OffsetAndMetadata(record.offset() + 1 , null)); // 개별 오프셋 커밋
+                    consumer.commitSync(currentOffsets); // 동기 오프셋 커밋
                 }
             }
         } catch (WakeupException e) {
